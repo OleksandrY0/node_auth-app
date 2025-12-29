@@ -29,9 +29,19 @@ export function sendActivationEmail(email, token) {
   return send({ email, html, subject: 'Activate' });
 }
 
+export function sendResetPasswordEmail(email, token) {
+  const href = `${process.env.CLIENT_HOST}/password-reset/${email}/${token}`;
+  const html = `
+    <h1>Password Reset</h1>
+    <p>Click the link below to reset your password:</p>
+    <a href="${href}">${href}</a>
+  `;
 
+  return send({ email, html, subject: 'Reset Your Password' });
+}
 
 export const emailService = {
   sendActivationEmail,
+  sendResetPasswordEmail,
   send,
 };

@@ -13,8 +13,38 @@ async function getAllActivated() {
   return users;
 }
 
-function normalizedUser({ id, email }) {
-  return { id, email };
+async function findUserById(id) {
+  return await User.findByPk(id);
+}
+
+function normalizedUser({ id, email, name }) {
+  return { id, email, name };
+}
+
+async function changeName(id, name) {
+  const user = await findUserById(id);
+
+  user.name = name;
+
+  await user.save();
+
+  return user;
+}
+
+async function changePassword(user, password) {
+  user.password = password;
+
+  await user.save();
+
+  return user;
+}
+
+async function changeEmail(user, email) {
+  user.email = email;
+
+  await user.save();
+
+  return user;
 }
 
 async function findByEmail(email) {
@@ -25,7 +55,7 @@ async function findByEmail(email) {
   });
 }
 
-async function register(email, password) {
+async function register(email, password, name) {
   const activationToken = uuidv4();
 
   const existUser = await findByEmail(email);
@@ -34,8 +64,23 @@ async function register(email, password) {
     throw ApiError.badRequest('User already exist');
   }
 
-  await User.create({ email, password, activationToken });
+  await User.create({ email, password, activationToken, name });
   await emailService.sendActivationEmail(email, activationToken);
+}
+
+async function forgot(email) {
+  const resetToken = uuidv4();
+
+  const user = await findByEmail(email);
+
+  if (!user) {
+    return;
+  }
+
+  user.resetToken = resetToken;
+
+  await user.save();
+  await emailService.sendResetPasswordEmail(email, resetToken);
 }
 
 export const userService = {
@@ -43,4 +88,9 @@ export const userService = {
   getAllActivated,
   normalizedUser,
   findByEmail,
+  forgot,
+  findUserById,
+  changeName,
+  changePassword,
+  changeEmail,
 };

@@ -13,26 +13,32 @@ function validateEmail(value) {
   if (!EMAIL_PATTERN.test(value)) return 'Email is not valid';
 }
 
+function validateName(value) {
+  if (!value) return 'Name is required';
+  if (value.trim().length < 4) return 'Name length must be more than 4 symbols';
+}
+
 const validatePassword = (value) => {
   if (!value) return 'Password is required';
   if (value.length < 6) return 'At least 6 characters';
 };
 
 const register = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, name } = req.body;
 
   const errors = {
     email: validateEmail(email),
     password: validatePassword(password),
+    name: validateName(name),
   };
 
-  if (errors.email || errors.password) {
+  if (errors.email || errors.password || errors.name) {
     return res.sendStatus(400);
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  await userService.register(email, hashedPassword);
+  await userService.register(email, hashedPassword, name);
 
   res.send({ message: 'OK' });
 };
@@ -63,7 +69,11 @@ const login = async (req, res) => {
   const user = await userService.findByEmail(email);
 
   if (!user) {
-    return res.sendStatus(404);
+    throw ApiError.unauthorized();
+  }
+
+  if (user.activationToken) {
+    throw ApiError.unauthorized();
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -86,7 +96,7 @@ const refresh = async (req, res) => {
   }
 
   generateTokens(res, user);
-}
+};
 
 const logout = async (req, res) => {
   const { refreshToken } = req.cookies;
@@ -99,8 +109,9 @@ const logout = async (req, res) => {
 
   await tokenService.remove(user.id);
 
+  res.clearCookie('refreshToken');
   res.sendStatus(204);
-}
+};
 
 const generateTokens = async (res, user) => {
   const normalizedUser = userService.normalizedUser(user);
@@ -120,7 +131,41 @@ const generateTokens = async (res, user) => {
     user: normalizedUser,
     accessToken,
   });
-}
+};
+
+const forgot = async (req, res) => {
+  const { email } = req.body;
+
+  await userService.forgot(email);
+
+  res.send({ message: 'OK' });
+};
+
+const passwordReset = async (req, res) => {
+  const { email, resetToken } = req.params;
+  const { password } = req.body;
+
+  if (validatePassword(password)) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters' });
+  }
+
+  const user = await User.findOne({
+    where: {
+      email,
+      resetToken,
+    },
+  });
+
+  if (!user) {
+    return res.sendStatus(404);
+  }
+
+  user.password = await bcrypt.hash(password, 10);
+  user.resetToken = null;
+  await user.save();
+
+  res.send(user);
+};
 
 export const authController = {
   register,
@@ -128,4 +173,6 @@ export const authController = {
   login,
   refresh,
   logout,
+  forgot,
+  passwordReset,
 };

@@ -6,7 +6,7 @@ export const Token = client.define('Tokens', {
   refreshToken: {
     type: DataTypes.STRING,
     allowNull: false,
-  }
+  },
 });
 
 Token.belongsTo(User, { foreignKey: 'UserId', onDelete: 'CASCADE' });
