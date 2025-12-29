@@ -39,13 +39,17 @@ async function changePassword(user, password) {
   return user;
 }
 
-async function changeEmail(user, email) {
-  user.email = email;
+async function changeEmail(user, newEmail) {
+  const oldEmail = user.email;
 
+  user.email = newEmail;
   await user.save();
+
+  await emailService.sendEmailChangedNotification(oldEmail, newEmail);
 
   return user;
 }
+
 
 async function findByEmail(email) {
   return await User.findOne({

@@ -27,9 +27,9 @@ app.use('/users', authMiddleware, userRouter);
 
 app.use(errorMidleware);
 
-// app.all('/', (req, res) => {
-//   res.status(404).json({ message: 'Page not found' });
-// });
+app.all('/', (req, res) => {
+  res.status(404).json({ message: 'Page not found' });
+});
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console

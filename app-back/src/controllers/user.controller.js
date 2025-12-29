@@ -1,6 +1,8 @@
+import { ApiError } from '../exeptions/api.error.js';
 import { User } from '../models/user.model.js';
 import { userService } from '../services/user.service.js';
 import bcrypt from 'bcrypt';
+import { authController } from './auth.controller.js';
 
 const getAllActivated = async (req, res) => {
   const users = await userService.getAllActivated();
@@ -24,23 +26,29 @@ const changeName = async (req, res) => {
 };
 
 const changePassword = async (req, res) => {
-  const { oldPassword, newPassword } = req.body;
+  const { oldPassword, newPassword, confirmPassword } = req.body;
   const userId = req.user.id;
+
+  if (authController.validatePassword(newPassword)) {
+    return ApiError.badRequest();
+  }
+
+  if (newPassword !== confirmPassword) {
+    return ApiError.badRequest();
+  }
 
   const user = await userService.findUserById(userId);
 
   const isValid = await bcrypt.compare(oldPassword, user.password);
-
   if (!isValid) {
     return res.sendStatus(401);
   }
 
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-  const newUser = await userService.changePassword(user, hashedPassword);
+  user.password = await bcrypt.hash(newPassword, 10);
+  await user.save();
 
   res.send({
-    user: userService.normalizedUser(newUser),
+    user: userService.normalizedUser(user),
   });
 };
 

@@ -143,10 +143,22 @@ const forgot = async (req, res) => {
 
 const passwordReset = async (req, res) => {
   const { email, resetToken } = req.params;
-  const { password } = req.body;
+  const { password, confirmPassword } = req.body;
 
   if (validatePassword(password)) {
-    return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    return res
+      .status(400)
+      .json({ message: 'Password must be at least 6 characters' });
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match' });
+  }
+
+  if (validatePassword(password)) {
+    return res
+      .status(400)
+      .json({ message: 'Password must be at least 6 characters' });
   }
 
   const user = await User.findOne({
@@ -175,4 +187,5 @@ export const authController = {
   logout,
   forgot,
   passwordReset,
+  validatePassword,
 };
